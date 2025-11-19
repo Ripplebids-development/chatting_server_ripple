@@ -97,6 +97,7 @@ app.get('/getMessageRooms', (req, res) => {
   try {
     const rows = db.prepare('SELECT DISTINCT roomId FROM messages').all();
     dbRoomIds = rows.map(r => String(r.roomId));
+    console.log("DMMM: ", dbRoomIds)
   } catch (e) {
     // if DB read fails, just continue with active rooms
     console.error('failed to read rooms from db', e);
@@ -104,11 +105,13 @@ app.get('/getMessageRooms', (req, res) => {
 
   const allRoomIds = Array.from(new Set(activeRoomIds.concat(dbRoomIds)));
 
-  const key = sellerEmail.slice(4);
+const key = sellerEmail.slice(0, 4);
+  console.log("SEARCH KEY: ", key);
   const matched = allRoomIds.filter(rid => {
     if (!rid) return false;
     const parts = String(rid).split('-');
-    return parts[2] === key;
+    console.log("PARTS: ", parts);
+    return parts[6] === key;
   });
 
   res.json({ rooms: matched });
