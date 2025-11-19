@@ -82,6 +82,38 @@ app.post('/messages', (req, res) => {
   res.json({ id: msgId });
 });
 
+// Get message rooms for a seller
+// Query param: `email` (seller email)
+// Logic: returns rooms where roomId.split('-')[2] === sellerEmail.slice(4)
+app.get('/getMessageRooms', (req, res) => {
+  const sellerEmail = String(req.query.email || '').trim();
+  if (!sellerEmail) return res.status(400).json({ error: 'email query param required' });
+
+  // Collect room ids from active websocket rooms
+  const activeRoomIds = Array.from(rooms.keys());
+
+  // Collect room ids that have messages in DB
+  let dbRoomIds = [];
+  try {
+    const rows = db.prepare('SELECT DISTINCT roomId FROM messages').all();
+    dbRoomIds = rows.map(r => String(r.roomId));
+  } catch (e) {
+    // if DB read fails, just continue with active rooms
+    console.error('failed to read rooms from db', e);
+  }
+
+  const allRoomIds = Array.from(new Set(activeRoomIds.concat(dbRoomIds)));
+
+  const key = sellerEmail.slice(4);
+  const matched = allRoomIds.filter(rid => {
+    if (!rid) return false;
+    const parts = String(rid).split('-');
+    return parts[2] === key;
+  });
+
+  res.json({ rooms: matched });
+});
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/chat' });
 const rooms = new Map();
